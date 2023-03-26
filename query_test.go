@@ -1,0 +1,104 @@
+package mongoq
+
+import (
+	"testing"
+
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+
+	"github.com/stretchr/testify/suite"
+)
+
+func TestReportSuite(t *testing.T) {
+	suite.Run(t, new(ReportSuite))
+}
+
+type ReportSuite struct {
+	suite.Suite
+}
+
+func (s *ReportSuite) SetupSuite() {
+
+}
+
+type queryVector struct {
+	n string
+	e string
+	x string
+	r bson.M
+}
+
+func (s *ReportSuite) testVectors(vectors []queryVector) {
+	for _, vector := range vectors {
+		rslt, err := ParseQuery(vector.e)
+		if vector.x != "" {
+			s.Equal(vector.x, err.Error())
+			s.Nil(vector.r)
+		} else {
+			s.NoError(err)
+			s.Equal(vector.r, rslt)
+		}
+	}
+}
+
+func (s *ReportSuite) TestOne() {
+
+	vectors := []queryVector{
+		{n: "int-float-bool", e: "age>10 && height<5.1 && dead==true", r: primitive.M{"age": primitive.M{"$gt": int64(10)}, "height": primitive.M{"$lt": 5.1}, "dead": true}},
+	}
+	s.testVectors(vectors)
+}
+
+func (s *ReportSuite) TestGoodQueries() {
+
+	vectors := []queryVector{
+		{n: "parens", e: "person.age >= 18 && (person.name == \"Alice\" || name == \"Bob\")", r: primitive.M{"$or": []any{primitive.M{"person.name": "Alice"}, primitive.M{"name": "Bob"}}, "person.age": primitive.M{"$gte": int64(18)}}},
+		{n: "multi-and", e: "age>10 && height<5 && width==4", r: primitive.M{"age": primitive.M{"$gt": int64(10)}, "height": primitive.M{"$lt": int64(5)}, "width": int64(4)}},
+		{n: "int-float-bool", e: "age>10 && height<5.1 && dead==true", r: primitive.M{"age": primitive.M{"$gt": int64(10)}, "height": primitive.M{"$lt": 5.1}, "dead": true}},
+		{n: "bool-string", e: "dead==true && alive==\"false\"", r: primitive.M{"alive": "false", "dead": true}},
+		{n: "multi-or", e: "age>10 || height<5 || width==4", r: primitive.M{"$or": []any{primitive.M{"age": primitive.M{"$gt": int64(10)}}, primitive.M{"height": primitive.M{"$lt": int64(5)}}, primitive.M{"width": int64(4)}}}},
+		{n: "and", e: "name != \"Bob\" && age > 18", r: primitive.M{"age": primitive.M{"$gt": int64(18)}, "name": primitive.M{"$ne": "Bob"}}},
+		{n: "exists-and", e: "name && age > 10", r: primitive.M{"age": primitive.M{"$gt": int64(10)}, "name": primitive.M{"$exists": true}}},
+		{n: "exists", e: "name", r: primitive.M{"name": primitive.M{"$exists": true}}},
+		{n: "exists-sub", e: "person.age", r: primitive.M{"person.age": primitive.M{"$exists": true}}},
+		{n: "not-exists", e: "!name", r: primitive.M{"name": primitive.M{"$exists": false}}},
+		{n: "noquotes1", e: "name == Alice", r: primitive.M{"name": "Alice"}},
+		{e: "age > 10 && (name || !desc)", r: primitive.M{"$or": []any{primitive.M{"name": primitive.M{"$exists": true}}, primitive.M{"desc": primitive.M{"$exists": false}}}, "age": primitive.M{"$gt": int64(10)}}},
+		{e: "age > 10 && age < 20", r: primitive.M{"$and": []any{primitive.M{"age": primitive.M{"$gt": int64(10)}}, primitive.M{"age": primitive.M{"$lt": int64(20)}}}}},
+		{e: "_id == \"5fc4722ae367f19055977d1f\"", r: primitive.M{"_id": primitive.ObjectID{0x5f, 0xc4, 0x72, 0x2a, 0xe3, 0x67, 0xf1, 0x90, 0x55, 0x97, 0x7d, 0x1f}}},
+	}
+	s.testVectors(vectors)
+}
+
+func (s *ReportSuite) TestInNin() {
+
+	vectors := []queryVector{
+		{n: "in2", e: "name == (\"Alice\"| \"Bob\")", r: primitive.M{"name": primitive.M{"$in": []interface{}{"Alice", "Bob"}}}},
+		{n: "in3", e: "name == (\"Alice\" | \"Bob\" | \"Charlie\")", r: primitive.M{"name": primitive.M{"$in": []any{"Alice", "Bob", "Charlie"}}}},
+		{n: "in4", e: "name == (\"Alice\" | \"Bob\" | \"Charlie\" | \"Maya\")", r: primitive.M{"name": primitive.M{"$in": []any{"Alice", "Bob", "Charlie", "Maya"}}}},
+		{n: "nin2", e: "name != (\"Alice\" | \"Bob\")", r: primitive.M{"name": primitive.M{"$nin": []any{"Alice", "Bob"}}}},
+		{n: "nin3", e: "name != (\"Alice\" | \"Bob\" | \"Charlie\")", r: primitive.M{"name": primitive.M{"$nin": []any{"Alice", "Bob", "Charlie"}}}},
+		{n: "nin4", e: "name != (\"Alice\" | \"Bob\" | \"Charlie\" | \"Maya\")", r: primitive.M{"name": primitive.M{"$nin": []any{"Alice", "Bob", "Charlie", "Maya"}}}},
+		{n: "in-bad-op", e: "name > (\"Alice\" | \"Bob\" | \"Charlie\")", r: nil, x: "invalid right operand for operator '>'"},
+		{n: "in-bad-inner", e: "name == (\"Alice\" | \"Bob\" & \"Charlie\")", r: nil, x: "unsupported operator: '&'"},
+	}
+	s.testVectors(vectors)
+}
+
+func (s *ReportSuite) TestBadQueries() {
+
+	vectors := []queryVector{
+		{n: "err-gr-string", e: "person.age >= \"test\"", r: nil, x: "invalid right operand for operator '>='"},
+		{e: "_id == 5fc4722ae367f19055977d1f", x: "1:9: expected 'EOF', found fc4722ae367f19055977d1f"},
+	}
+	s.testVectors(vectors)
+}
+
+func (s *ReportSuite) TestRegexQueries() {
+
+	vectors := []queryVector{
+		{n: "regex1", e: "name ==\"/.*Alice.*/\"", r: primitive.M{"name": primitive.Regex{Pattern: ".*Alice.*", Options: "i"}}},
+		{n: "regex1", e: "name ==/.*Alice.*/", x: "1:8: expected operand, found '/'"},
+	}
+	s.testVectors(vectors)
+}
