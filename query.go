@@ -69,7 +69,7 @@ func mergeAnd(leftQuery any, rightQuery any) (any, error) {
 	rm, rok := rightQuery.(bson.M)
 	if lok && rok {
 		useAnd := false
-		for rk, _ := range rm {
+		for rk := range rm {
 			if _, found := lm[rk]; found {
 				// revert to $and
 				useAnd = true
