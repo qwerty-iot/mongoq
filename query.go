@@ -5,7 +5,9 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"regexp"
 	"strings"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 
@@ -22,9 +24,43 @@ func onError(originalExpression string, err error) {
 	}
 }
 
+func doubleQuoteKeyword(expr string, keyword string) string {
+	re := regexp.MustCompile(`\b` + keyword + `\b`)
+	matches := re.FindAllStringIndex(expr, -1)
+
+	// If no matches found, return the original string
+	if len(matches) == 0 {
+		return expr
+	}
+
+	// Build a new string with matched "type" words enclosed in double-quotes
+	var b strings.Builder
+	prevEnd := 0
+	for _, match := range matches {
+		start, end := match[0], match[1]
+		b.WriteString(expr[prevEnd:start]) // Write everything before the match
+		if start == 0 || end == len(expr) || (expr[start-1:start] != `"` && expr[end:end+1] != `"`) {
+			b.WriteString(`"` + keyword + `"`) // Enclose the match in double-quotes
+		} else {
+			b.WriteString(expr[start:end]) // Match is already enclosed in double-quotes
+		}
+		prevEnd = end
+	}
+	b.WriteString(expr[prevEnd:]) // Write everything after the last match
+
+	return b.String()
+}
+
 func ParseQuery(expr string) (bson.M, error) {
 	// Parse the expression and generate an AST
 	expr = strings.TrimSpace(expr)
+
+	expr = strings.Replace(expr, " and ", " && ", -1)
+	expr = strings.Replace(expr, " or ", " || ", -1)
+	expr = strings.Replace(expr, " AND ", " && ", -1)
+	expr = strings.Replace(expr, " OR ", " && ", -1)
+	expr = doubleQuoteKeyword(expr, "type")
+
 	fset := token.NewFileSet()
 	exprAst, err := parser.ParseExprFrom(fset, "", expr, 0)
 	if err != nil {
@@ -122,11 +158,6 @@ func convertBinaryOp(e *ast.BinaryExpr, parentOp *token.Token) (any, error) {
 
 	switch operator {
 	case "$eq":
-		if rv, rok := isRegex(rightQuery); rok {
-			return bson.M{
-				tox.ToString(leftQuery): primitive.Regex{Pattern: rv, Options: "i"},
-			}, nil
-		}
 		return bson.M{
 			tox.ToString(leftQuery): rightQuery,
 		}, nil
@@ -143,7 +174,7 @@ func convertBinaryOp(e *ast.BinaryExpr, parentOp *token.Token) (any, error) {
 		}, nil
 	case "$gt", "$gte", "$lt", "$lte":
 		switch rightQuery.(type) {
-		case int64, float64:
+		case int64, float64, time.Time:
 		// noop
 		default:
 			return nil, fmt.Errorf("invalid right operand for operator '%s'", e.Op.String())
@@ -198,6 +229,10 @@ func convertLiteralOp(e *ast.BasicLit, parentOp *token.Token) (any, error) {
 			return bson.M{strValue: bson.M{"$exists": true}}, nil
 		} else if oid, oidErr := primitive.ObjectIDFromHex(strValue); oidErr == nil {
 			return oid, nil
+		} else if rv, rok := isRegex(strValue); rok {
+			return primitive.Regex{Pattern: rv, Options: "i"}, nil
+		} else if strings.Contains(strValue, "*") {
+			return primitive.Regex{Pattern: strings.ReplaceAll(strValue, "*", ".*"), Options: "i"}, nil
 		} else {
 			return strValue, nil
 		}
@@ -245,6 +280,25 @@ func convertUnaryOp(e *ast.UnaryExpr, parentOp *token.Token) (any, error) {
 	}
 }
 
+func convertCallExpr(e *ast.CallExpr, parentOp *token.Token) (any, error) {
+	funcName := e.Fun.(*ast.Ident).Name
+	switch funcName {
+	case "contains":
+		return callContains(e, parentOp)
+	case "exists":
+		return callExists(e, parentOp)
+	case "nexists":
+		return callNotExists(e, parentOp)
+	case "regex":
+		return callRegex(e, parentOp)
+	case "dateRelative":
+		return callDateRelative(e, parentOp)
+	case "search":
+		return callSearch(e, parentOp)
+	}
+	return nil, fmt.Errorf("unsupported function: %s", funcName)
+}
+
 func convertExprToMongoQuery(expr ast.Expr, parentOp *token.Token) (any, error) {
 	switch e := expr.(type) {
 	case *ast.BinaryExpr:
@@ -271,6 +325,9 @@ func convertExprToMongoQuery(expr ast.Expr, parentOp *token.Token) (any, error) 
 				return id.Name + "." + e.Sel.Name, nil
 			}
 		}
+	case *ast.CallExpr:
+		// Handle call expressions (e.g. "foo(bar)")
+		return convertCallExpr(e, parentOp)
 	default:
 		return nil, fmt.Errorf("unsupported ast: %V (%T)", e, e)
 	}

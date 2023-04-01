@@ -60,12 +60,16 @@ func (s *ReportSuite) TestGoodQueries() {
 		{n: "and", e: "name != \"Bob\" && age > 18", r: primitive.M{"age": primitive.M{"$gt": int64(18)}, "name": primitive.M{"$ne": "Bob"}}},
 		{n: "exists-and", e: "name && age > 10", r: primitive.M{"age": primitive.M{"$gt": int64(10)}, "name": primitive.M{"$exists": true}}},
 		{n: "exists", e: "name", r: primitive.M{"name": primitive.M{"$exists": true}}},
+		{n: "exists(name)", e: "exists(name)", r: primitive.M{"name": primitive.M{"$exists": true}}},
+		{n: "exists(name.foo)", e: "exists(name.foo)", r: primitive.M{"name.foo": primitive.M{"$exists": true}}},
+		{n: "complex", e: "age > 10 && exists(name.foo)", r: primitive.M{"age": primitive.M{"$gt": int64(10)}, "name.foo": primitive.M{"$exists": true}}},
 		{n: "exists-sub", e: "person.age", r: primitive.M{"person.age": primitive.M{"$exists": true}}},
 		{n: "not-exists", e: "!name", r: primitive.M{"name": primitive.M{"$exists": false}}},
 		{n: "noquotes1", e: "name == Alice", r: primitive.M{"name": "Alice"}},
 		{e: "age > 10 && (name || !desc)", r: primitive.M{"$or": []any{primitive.M{"name": primitive.M{"$exists": true}}, primitive.M{"desc": primitive.M{"$exists": false}}}, "age": primitive.M{"$gt": int64(10)}}},
 		{e: "age > 10 && age < 20", r: primitive.M{"$and": []any{primitive.M{"age": primitive.M{"$gt": int64(10)}}, primitive.M{"age": primitive.M{"$lt": int64(20)}}}}},
 		{e: "_id == \"5fc4722ae367f19055977d1f\"", r: primitive.M{"_id": primitive.ObjectID{0x5f, 0xc4, 0x72, 0x2a, 0xe3, 0x67, 0xf1, 0x90, 0x55, 0x97, 0x7d, 0x1f}}},
+		{n: "type", e: "\"type\" == \"Alice\"", r: primitive.M{"type": "Alice"}},
 	}
 	s.testVectors(vectors)
 }
@@ -97,8 +101,27 @@ func (s *ReportSuite) TestBadQueries() {
 func (s *ReportSuite) TestRegexQueries() {
 
 	vectors := []queryVector{
-		{n: "regex1", e: "name ==\"/.*Alice.*/\"", r: primitive.M{"name": primitive.Regex{Pattern: ".*Alice.*", Options: "i"}}},
-		{n: "regex1", e: "name ==/.*Alice.*/", x: "1:8: expected operand, found '/'"},
+		{n: "regex1", e: "name == regex(\".*Alice.*\")", r: primitive.M{"name": primitive.Regex{Pattern: ".*Alice.*", Options: "i"}}},
+		{n: "regex2", e: "name ==/.*Alice.*/", x: "1:8: expected operand, found '/'"},
+		{n: "regex3", e: "name == contains(Alice)", r: primitive.M{"name": primitive.Regex{Pattern: ".*Alice.*", Options: "i"}}},
+		{n: "regex3", e: "name == \"Alice*\"", r: primitive.M{"name": primitive.Regex{Pattern: "Alice.*", Options: "i"}}},
+	}
+	s.testVectors(vectors)
+}
+
+func (s *ReportSuite) TestFullTextSearchQueries() {
+
+	vectors := []queryVector{
+		{n: "fts", e: "search(bob, willy, joe)", r: primitive.M{"$text": primitive.M{"$search": "bob willy joe"}}},
+		{n: "fts-neg", e: "search(bob, willy, \"-joe\")", r: primitive.M{"$text": primitive.M{"$search": "bob willy -joe"}}},
+	}
+	s.testVectors(vectors)
+}
+
+func (s *ReportSuite) TestUserQueries() {
+
+	vectors := []queryVector{
+		{n: "fts", e: "\"data.accelerometer_3313.0.x_value_5702\">5", r: primitive.M{"$text": primitive.M{"$search": "bob willy joe"}}},
 	}
 	s.testVectors(vectors)
 }
