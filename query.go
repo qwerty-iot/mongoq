@@ -299,6 +299,16 @@ func convertCallExpr(e *ast.CallExpr, parentOp *token.Token) (any, error) {
 	return nil, fmt.Errorf("unsupported function: %s", funcName)
 }
 
+func buildNameFromSelector(sel *ast.SelectorExpr) string {
+	switch nt := sel.X.(type) {
+	case *ast.SelectorExpr:
+		return buildNameFromSelector(nt) + "." + sel.Sel.Name
+	case *ast.Ident:
+		return nt.Name + "." + sel.Sel.Name
+	}
+	return ""
+}
+
 func convertExprToMongoQuery(expr ast.Expr, parentOp *token.Token) (any, error) {
 	switch e := expr.(type) {
 	case *ast.BinaryExpr:
@@ -318,12 +328,11 @@ func convertExprToMongoQuery(expr ast.Expr, parentOp *token.Token) (any, error) 
 		return convertExprToMongoQuery(e.X, nil)
 	case *ast.SelectorExpr:
 		// Handle selector expressions (e.g. "foo.bar")
-		if id, ok := e.X.(*ast.Ident); ok {
-			if parentOp == nil || binarOpIsLogical(*parentOp) {
-				return bson.M{id.Name + "." + e.Sel.Name: bson.M{"$exists": true}}, nil
-			} else {
-				return id.Name + "." + e.Sel.Name, nil
-			}
+		name := buildNameFromSelector(e)
+		if parentOp == nil || binarOpIsLogical(*parentOp) {
+			return bson.M{name: bson.M{"$exists": true}}, nil
+		} else {
+			return name, nil
 		}
 	case *ast.CallExpr:
 		// Handle call expressions (e.g. "foo(bar)")

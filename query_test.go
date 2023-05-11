@@ -70,6 +70,18 @@ func (s *ReportSuite) TestGoodQueries() {
 		{e: "age > 10 && age < 20", r: primitive.M{"$and": []any{primitive.M{"age": primitive.M{"$gt": int64(10)}}, primitive.M{"age": primitive.M{"$lt": int64(20)}}}}},
 		{e: "_id == \"5fc4722ae367f19055977d1f\"", r: primitive.M{"_id": primitive.ObjectID{0x5f, 0xc4, 0x72, 0x2a, 0xe3, 0x67, 0xf1, 0x90, 0x55, 0x97, 0x7d, 0x1f}}},
 		{n: "type", e: "\"type\" == \"Alice\"", r: primitive.M{"type": "Alice"}},
+		{n: "double-nested", e: "level1.level2.level3 == \"Alice\"", r: primitive.M{"level1.level2.level3": "Alice"}},
+	}
+	s.testVectors(vectors)
+}
+
+func (s *ReportSuite) TestNestedQueries() {
+
+	vectors := []queryVector{
+		{n: "single", e: "level1 == \"Alice\"", r: primitive.M{"level1": "Alice"}},
+		{n: "single-nested", e: "level1.level2 == \"Alice\"", r: primitive.M{"level1.level2": "Alice"}},
+		{n: "double-nested", e: "level1.level2.level3 == \"Alice\"", r: primitive.M{"level1.level2.level3": "Alice"}},
+		{n: "triple-nested", e: "level1.level2.level3.level4 == \"Alice\"", r: primitive.M{"level1.level2.level3.level4": "Alice"}},
 	}
 	s.testVectors(vectors)
 }
