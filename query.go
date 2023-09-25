@@ -206,6 +206,17 @@ func convertBinaryOp(e *ast.BinaryExpr, parentOp *token.Token) (any, error) {
 		return bson.M{
 			operator: rslt,
 		}, nil
+	case "$all":
+		rslt := mergeArrays(leftQuery, rightQuery)
+		if parentOp != nil && *parentOp == token.AND {
+			// nested or
+			return rslt, nil
+		} else if parentOp != nil && *parentOp == token.EQL {
+			operator = "$all"
+		}
+		return bson.M{
+			operator: rslt,
+		}, nil
 	default:
 		return nil, fmt.Errorf("unsupported operator: '%s'", e.Op.String())
 	}
@@ -371,6 +382,8 @@ func binaryOpToMongoOperator(op token.Token) string {
 		return "$or"
 	case token.OR:
 		return "$in"
+	case token.AND:
+		return "$all"
 	}
 	return ""
 }

@@ -101,6 +101,15 @@ func (s *ReportSuite) TestInNin() {
 	s.testVectors(vectors)
 }
 
+func (s *ReportSuite) TestAll() {
+
+	vectors := []queryVector{
+		{n: "in2", e: "name == (\"Alice\"| \"Bob\")", r: primitive.M{"name": primitive.M{"$in": []interface{}{"Alice", "Bob"}}}},
+		{n: "all1", e: "name == (\"Alice\" & \"Bob\" & \"Charlie\")", r: primitive.M{"name": primitive.M{"$all": []any{"Alice", "Bob", "Charlie"}}}},
+	}
+	s.testVectors(vectors)
+}
+
 func (s *ReportSuite) TestBadQueries() {
 
 	vectors := []queryVector{
