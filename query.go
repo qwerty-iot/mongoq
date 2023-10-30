@@ -336,7 +336,9 @@ func convertExprToMongoQuery(expr ast.Expr, parentOp *token.Token) (any, error) 
 		return convertIdentOp(e, parentOp)
 	case *ast.ParenExpr:
 		// Handle parenthesized expressions (e.g. "(foo == bar)")
-		return convertExprToMongoQuery(e.X, nil)
+		parentOp = new(token.Token)
+		*parentOp = token.LPAREN
+		return convertExprToMongoQuery(e.X, parentOp)
 	case *ast.SelectorExpr:
 		// Handle selector expressions (e.g. "foo.bar")
 		name := buildNameFromSelector(e)
