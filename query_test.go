@@ -48,7 +48,7 @@ func (s *ReportSuite) testVectors(vectors []queryVector) {
 func (s *ReportSuite) TestOne() {
 
 	vectors := []queryVector{
-		{n: "one-val", e: "id==(\"64d7b3661b467d611d5f1401\")", r: primitive.M{"id": primitive.ObjectID{0x64, 0xd7, 0xb3, 0x66, 0x1b, 0x46, 0x7d, 0x61, 0x1d, 0x5f, 0x14, 0x01}}},
+		{n: "one-val", e: "tags.customer==\"SAMSCLUB\" && tags._manufacturer==\"Kaivac\" && tags.club==(\"4703\"|\"4710\"|\"4729\"|\"4732\"|\"4804\"|\"4837\"|\"4958\"|\"4996\"|\"6270\"|\"6343\"|\"6354\"|\"6360\"|\"6373\"|\"6379\"|\"6432\"|\"6435\"|\"6439\"|\"6455\"|\"6464\"|\"6503\"|\"6543\"|\"6689\"|\"8120\"|\"8192\"|\"8194\"|\"8219\"|\"8227\"|\"8268\"|\"8273\"|\"8282\")", r: primitive.M{"id": primitive.ObjectID{0x64, 0xd7, 0xb3, 0x66, 0x1b, 0x46, 0x7d, 0x61, 0x1d, 0x5f, 0x14, 0x01}}},
 	}
 	s.testVectors(vectors)
 }
