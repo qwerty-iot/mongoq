@@ -2,6 +2,7 @@ package mongoq
 
 import (
 	"testing"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -77,6 +78,8 @@ func (s *ReportSuite) TestGoodQueries() {
 		{n: "double-nested", e: "level1.level2.level3 == \"Alice\"", r: primitive.M{"level1.level2.level3": "Alice"}},
 		{n: "int-float-bool", e: "age>10 && height<5.1 && dead==true", r: primitive.M{"age": primitive.M{"$gt": int64(10)}, "height": primitive.M{"$lt": 5.1}, "dead": true}},
 		{n: "one-val", e: "id==(\"64d7b3661b467d611d5f1401\")", r: primitive.M{"id": primitive.ObjectID{0x64, 0xd7, 0xb3, 0x66, 0x1b, 0x46, 0x7d, 0x61, 0x1d, 0x5f, 0x14, 0x01}}},
+		{n: "date-rfc3339", e: "ts==date(\"2020-12-01T00:00:00Z\")", r: primitive.M{"ts": time.Date(2020, 12, 1, 0, 0, 0, 0, time.UTC)}},
+		{n: "date-custom", e: "ts==date(\"20201201\",\"20060102\")", r: primitive.M{"ts": time.Date(2020, 12, 1, 0, 0, 0, 0, time.UTC)}},
 	}
 	s.testVectors(vectors)
 }

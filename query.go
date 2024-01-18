@@ -302,6 +302,8 @@ func convertCallExpr(e *ast.CallExpr, parentOp *token.Token) (any, error) {
 		return callNotExists(e, parentOp)
 	case "regex":
 		return callRegex(e, parentOp)
+	case "date":
+		return callDate(e, parentOp)
 	case "dateRelative":
 		return callDateRelative(e, parentOp)
 	case "search":

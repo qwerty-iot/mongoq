@@ -29,7 +29,7 @@ func convertCallArgsToStringArray(name string, args []ast.Expr, expected int) ([
 			return nil, fmt.Errorf("%s() unsupported argument type: %v", name, arg)
 		}
 	}
-	if expected > 0 && len(arr) != expected {
+	if len(arr) < expected {
 		return nil, fmt.Errorf("%s() expected %d arguments, got %d", name, expected, len(arr))
 	}
 	return arr, nil
@@ -86,4 +86,24 @@ func callDateRelative(e *ast.CallExpr, parentOp *token.Token) (any, error) {
 	}
 	ts := time.Now().UTC().Add(dur)
 	return ts, nil
+}
+
+func callDate(e *ast.CallExpr, parentOp *token.Token) (any, error) {
+	args, err := convertCallArgsToStringArray("date", e.Args, 1)
+	if err != nil {
+		return nil, err
+	}
+	if len(args) == 1 {
+		ts, err := time.Parse(time.RFC3339, args[0])
+		if err != nil {
+			return nil, err
+		}
+		return ts, nil
+	} else {
+		ts, err := time.Parse(args[1], args[0])
+		if err != nil {
+			return nil, err
+		}
+		return ts, nil
+	}
 }
