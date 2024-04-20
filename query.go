@@ -55,6 +55,7 @@ func ParseQuery(expr string) (bson.M, error) {
 	// Parse the expression and generate an AST
 	expr = strings.TrimSpace(expr)
 
+	expr = strings.Replace(expr, "\\", "\\\\", -1)
 	expr = strings.Replace(expr, " and ", " && ", -1)
 	expr = strings.Replace(expr, " or ", " || ", -1)
 	expr = strings.Replace(expr, " AND ", " && ", -1)
@@ -355,7 +356,6 @@ func convertExprToMongoQuery(expr ast.Expr, parentOp *token.Token) (any, error) 
 	default:
 		return nil, fmt.Errorf("unsupported ast: %V (%T)", e, e)
 	}
-	return nil, fmt.Errorf("unreachable")
 }
 
 func binarOpIsLogical(op token.Token) bool {
