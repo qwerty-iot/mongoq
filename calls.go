@@ -73,7 +73,7 @@ func callRegex(e *ast.CallExpr, parentOp *token.Token) (any, error) {
 		return nil, err
 	}
 	pattern := strings.Replace(args[0], "\\\\", "\\", -1)
-	return primitive.Regex{Pattern: pattern, Options: "i"}, nil
+	return primitive.Regex{Pattern: pattern}, nil
 }
 
 func callDateRelative(e *ast.CallExpr, parentOp *token.Token) (any, error) {
