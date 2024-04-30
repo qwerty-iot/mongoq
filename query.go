@@ -188,7 +188,7 @@ func convertBinaryOp(e *ast.BinaryExpr, parentOp *token.Token) (any, error) {
 	case "$or":
 		if parentOp != nil && *parentOp == token.LOR {
 			// nested or
-			return []any{leftQuery, rightQuery}, nil
+			return mergeArrays(leftQuery, rightQuery), nil
 		} else {
 			return bson.M{
 				operator: mergeArrays(leftQuery, rightQuery),

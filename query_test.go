@@ -49,8 +49,7 @@ func (s *ReportSuite) testVectors(vectors []queryVector) {
 func (s *ReportSuite) TestOne() {
 
 	vectors := []queryVector{
-		{n: "one-val", e: "tags.customer==\"SAMSCLUB\" && tags._manufacturer==\"Kaivac\" && tags.club==(\"4703\"|\"4710\"|\"4729\"|\"4732\"|\"4804\"|\"4837\"|\"4958\"|\"4996\"|\"6270\"|\"6343\"|\"6354\"|\"6360\"|\"6373\"|\"6379\"|\"6432\"|\"6435\"|\"6439\"|\"6455\"|\"6464\"|\"6503\"|\"6543\"|\"6689\"|\"8120\"|\"8192\"|\"8194\"|\"8219\"|\"8227\"|\"8268\"|\"8273\"|\"8282\")", r: primitive.M{"id": primitive.ObjectID{0x64, 0xd7, 0xb3, 0x66, 0x1b, 0x46, 0x7d, 0x61, 0x1d, 0x5f, 0x14, 0x01}}},
-	}
+		{n: "in-bad-inner", e: "name == (\"Alice\" | \"Bob\" & \"Charlie\")", r: nil, x: "unsupported use of: &"}}
 	s.testVectors(vectors)
 }
 
@@ -80,6 +79,7 @@ func (s *ReportSuite) TestGoodQueries() {
 		{n: "one-val", e: "id==(\"64d7b3661b467d611d5f1401\")", r: primitive.M{"id": primitive.ObjectID{0x64, 0xd7, 0xb3, 0x66, 0x1b, 0x46, 0x7d, 0x61, 0x1d, 0x5f, 0x14, 0x01}}},
 		{n: "date-rfc3339", e: "ts==date(\"2020-12-01T00:00:00Z\")", r: primitive.M{"ts": time.Date(2020, 12, 1, 0, 0, 0, 0, time.UTC)}},
 		{n: "date-custom", e: "ts==date(\"20201201\",\"20060102\")", r: primitive.M{"ts": time.Date(2020, 12, 1, 0, 0, 0, 0, time.UTC)}},
+		{n: "fts", e: "\"data.accelerometer_3313.0.x_value_5702\">5", r: primitive.M{"data.accelerometer_3313.0.x_value_5702": primitive.M{"$gt": int64(5)}}},
 	}
 	s.testVectors(vectors)
 }
@@ -105,7 +105,7 @@ func (s *ReportSuite) TestInNin() {
 		{n: "nin3", e: "name != (\"Alice\" | \"Bob\" | \"Charlie\")", r: primitive.M{"name": primitive.M{"$nin": []any{"Alice", "Bob", "Charlie"}}}},
 		{n: "nin4", e: "name != (\"Alice\" | \"Bob\" | \"Charlie\" | \"Maya\")", r: primitive.M{"name": primitive.M{"$nin": []any{"Alice", "Bob", "Charlie", "Maya"}}}},
 		{n: "in-bad-op", e: "name > (\"Alice\" | \"Bob\" | \"Charlie\")", r: nil, x: "invalid right operand for operator '>'"},
-		{n: "in-bad-inner", e: "name == (\"Alice\" | \"Bob\" & \"Charlie\")", r: nil},
+		{n: "in-bad-inner", e: "name == (\"Alice\" | \"Bob\" & \"Charlie\")", r: nil, x: "unsupported use of: &"},
 	}
 	s.testVectors(vectors)
 }
@@ -151,7 +151,13 @@ func (s *ReportSuite) TestFullTextSearchQueries() {
 func (s *ReportSuite) TestUserQueries() {
 
 	vectors := []queryVector{
-		{n: "fts", e: "\"data.accelerometer_3313.0.x_value_5702\">5", r: primitive.M{"data.accelerometer_3313.0.x_value_5702": primitive.M{"$gt": int64(5)}}},
+		{n: "nested", e: "tagArray==(\"customer:ARAMARK\" & \"_manufacturer:Chevrolet\") || tagArray==(\"customer:ARAMARK\" & \"_manufacturer:GMC\") || tagArray==(\"customer:ARAMARK\" & \"_manufacturer:Buick\") || tagArray==(\"customer:ARAMARK\" & \"_manufacturer:Cadillac\")",
+			r: primitive.M{"$or": []interface{}{
+				primitive.M{"tagArray": primitive.M{"$all": []interface{}{"customer:ARAMARK", "_manufacturer:Chevrolet"}}},
+				primitive.M{"tagArray": primitive.M{"$all": []interface{}{"customer:ARAMARK", "_manufacturer:GMC"}}},
+				primitive.M{"tagArray": primitive.M{"$all": []interface{}{"customer:ARAMARK", "_manufacturer:Buick"}}},
+				primitive.M{"tagArray": primitive.M{"$all": []interface{}{"customer:ARAMARK", "_manufacturer:Cadillac"}}},
+			}}},
 	}
 	s.testVectors(vectors)
 }
