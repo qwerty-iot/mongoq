@@ -55,6 +55,8 @@ func ParseQuery(expr string) (bson.M, error) {
 	// Parse the expression and generate an AST
 	expr = strings.TrimSpace(expr)
 
+	expr = strings.Replace(expr, "“", "\"", -1)
+	expr = strings.Replace(expr, "”", "\"", -1)
 	expr = strings.Replace(expr, "\\", "\\\\", -1)
 	expr = strings.Replace(expr, " and ", " && ", -1)
 	expr = strings.Replace(expr, " or ", " || ", -1)
@@ -175,7 +177,7 @@ func convertBinaryOp(e *ast.BinaryExpr, parentOp *token.Token) (any, error) {
 		}, nil
 	case "$gt", "$gte", "$lt", "$lte":
 		switch rightQuery.(type) {
-		case int64, float64, time.Time:
+		case int64, float64, time.Time, string:
 		// noop
 		default:
 			return nil, fmt.Errorf("invalid right operand for operator '%s'", e.Op.String())
