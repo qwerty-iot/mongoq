@@ -299,6 +299,8 @@ func convertCallExpr(e *ast.CallExpr, parentOp *token.Token) (any, error) {
 	switch funcName {
 	case "contains":
 		return callContains(e, parentOp)
+	case "ncontains":
+		return callNotContains(e, parentOp)
 	case "exists":
 		return callExists(e, parentOp)
 	case "nexists":

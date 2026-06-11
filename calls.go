@@ -67,6 +67,14 @@ func callContains(e *ast.CallExpr, parentOp *token.Token) (any, error) {
 	return primitive.Regex{Pattern: ".*" + args[0] + ".*", Options: "i"}, nil
 }
 
+func callNotContains(e *ast.CallExpr, parentOp *token.Token) (any, error) {
+	args, err := convertCallArgsToStringArray("ncontains", e.Args, 1)
+	if err != nil {
+		return nil, err
+	}
+	return bson.M{"$not": bson.M{"$regex": ".*" + args[0] + ".*", "$options": "i"}}, nil
+}
+
 func callRegex(e *ast.CallExpr, parentOp *token.Token) (any, error) {
 	args, err := convertCallArgsToStringArray("regex", e.Args, 1)
 	if err != nil {

@@ -134,6 +134,7 @@ func (s *ReportSuite) TestRegexQueries() {
 		{n: "regex1", e: "name == regex(\".*Alice.*\")", r: primitive.M{"name": primitive.Regex{Pattern: ".*Alice.*", Options: "i"}}},
 		{n: "regex2", e: "name ==/.*Alice.*/", x: "1:8: expected operand, found '/'"},
 		{n: "regex3", e: "name == contains(Alice)", r: primitive.M{"name": primitive.Regex{Pattern: ".*Alice.*", Options: "i"}}},
+		{n: "ncontains", e: "name == ncontains(Alice)", r: primitive.M{"name": primitive.M{"$not": primitive.M{"$regex": ".*Alice.*", "$options": "i"}}}},
 		{n: "regex3", e: "name == \"Alice*\"", r: primitive.M{"name": primitive.Regex{Pattern: "Alice.*", Options: "i"}}},
 	}
 	s.testVectors(vectors)
