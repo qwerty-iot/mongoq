@@ -1,11 +1,11 @@
-module github.com/qwerty-iot/mongoq
+module github.com/qwerty-iot/mongoq/v2
 
-go 1.20
+go 1.25.0
 
 require (
 	github.com/qwerty-iot/tox v1.2.2
 	github.com/stretchr/testify v1.8.4
-	go.mongodb.org/mongo-driver v1.13.0
+	go.mongodb.org/mongo-driver/v2 v2.9.1
 )
 
 require (

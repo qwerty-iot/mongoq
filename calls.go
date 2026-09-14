@@ -7,9 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson/primitive"
-
-	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 func convertCallArgsToStringArray(name string, args []ast.Expr, expected int) ([]string, error) {
@@ -64,7 +62,7 @@ func callContains(e *ast.CallExpr, parentOp *token.Token) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return primitive.Regex{Pattern: ".*" + args[0] + ".*", Options: "i"}, nil
+	return bson.Regex{Pattern: ".*" + args[0] + ".*", Options: "i"}, nil
 }
 
 func callNotContains(e *ast.CallExpr, parentOp *token.Token) (any, error) {
@@ -81,7 +79,7 @@ func callRegex(e *ast.CallExpr, parentOp *token.Token) (any, error) {
 		return nil, err
 	}
 	pattern := strings.Replace(args[0], "\\\\", "\\", -1)
-	return primitive.Regex{Pattern: pattern}, nil
+	return bson.Regex{Pattern: pattern}, nil
 }
 
 func callDateRelative(e *ast.CallExpr, parentOp *token.Token) (any, error) {

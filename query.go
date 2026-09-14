@@ -9,9 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson"
-
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 
 	"github.com/qwerty-iot/tox"
 )
@@ -241,12 +239,12 @@ func convertLiteralOp(e *ast.BasicLit, parentOp *token.Token) (any, error) {
 		strValue := strings.Trim(e.Value, `"`)
 		if parentOp == nil || *parentOp == token.LAND {
 			return bson.M{strValue: bson.M{"$exists": true}}, nil
-		} else if oid, oidErr := primitive.ObjectIDFromHex(strValue); oidErr == nil {
+		} else if oid, oidErr := bson.ObjectIDFromHex(strValue); oidErr == nil {
 			return oid, nil
 		} else if rv, rok := isRegex(strValue); rok {
-			return primitive.Regex{Pattern: rv, Options: "i"}, nil
+			return bson.Regex{Pattern: rv, Options: "i"}, nil
 		} else if strings.Contains(strValue, "*") {
-			return primitive.Regex{Pattern: strings.ReplaceAll(strValue, "*", ".*"), Options: "i"}, nil
+			return bson.Regex{Pattern: strings.ReplaceAll(strValue, "*", ".*"), Options: "i"}, nil
 		} else {
 			return strValue, nil
 		}
@@ -268,7 +266,7 @@ func convertIdentOp(e *ast.Ident, parentOp *token.Token) (any, error) {
 	}
 	if parentOp == nil || binarOpIsLogical(*parentOp) {
 		return bson.M{e.Name: bson.M{"$exists": true}}, nil
-	} else if oid, oidErr := primitive.ObjectIDFromHex(e.Name); oidErr == nil {
+	} else if oid, oidErr := bson.ObjectIDFromHex(e.Name); oidErr == nil {
 		return oid, nil
 	} else {
 		return e.Name, nil
