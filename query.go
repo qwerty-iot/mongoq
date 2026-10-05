@@ -293,7 +293,11 @@ func convertUnaryOp(e *ast.UnaryExpr, parentOp *token.Token) (any, error) {
 }
 
 func convertCallExpr(e *ast.CallExpr, parentOp *token.Token) (any, error) {
-	funcName := e.Fun.(*ast.Ident).Name
+	ident, ok := e.Fun.(*ast.Ident)
+	if !ok {
+		return nil, fmt.Errorf("unsupported function expression: %T", e.Fun)
+	}
+	funcName := ident.Name
 	switch funcName {
 	case "contains":
 		return callContains(e, parentOp)
